@@ -28,13 +28,20 @@ export class WebHost {
         this._baseDir = options.baseDir;
         this._baseUrl = options.baseUrl;
 
-        // Create a Multi-peer adapter
-        this._adapter = new MultipeerAdapter({ port: options.port, logger: options.logger });
+        // create an http server
+        const server = Restify.createServer({ name: 'Multi-peer Adapter + Static Host'});
+        this.serveStaticFiles(server);
 
-        // Start listening for new app connections from a multi-peer client
-        this._adapter.listen()
-            .then(server => this.serveStaticFiles(server))
-            .catch(reason => options.logger.log('error', "Failed to start HTTP server: " + reason));
+        // Create a Multi-peer adapter
+        this._adapter = new MultipeerAdapter({ server, logger: options.logger });
+        this._adapter.listen().catch();
+
+        // start up the server
+        try {
+            server.listen(options.port);
+        } catch (e) {
+            options.logger.log('error', e);
+        }
     }
 
     private serveStaticFiles(server: http.Server): void {
